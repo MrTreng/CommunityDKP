@@ -191,6 +191,7 @@ core.L = {
   DEFAULTSETSAVED = "Default settings saved.",
   DEFAULTSETTINGS = "Default Settings",
   DELETEDKPENTRY = "Delete DKP Entry",
+  EDITDKPENTRY = "Edit DKP Entry",
   DELETEENTRYREFUNDCONF = "Any DKP impacted by this entry will be refunded/removed from each player listed.",
   DISABLED = "Disabled",
   DISTRIBUTEALLDKPCONF = "Distribute DKP to all players in the raid?",
