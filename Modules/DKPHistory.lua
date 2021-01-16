@@ -12,6 +12,7 @@ local year;
 local month;
 local day;
 local timeofday;
+local ostime = time;
 local player_table = {};
 local classSearch;
 local playerString = "";
@@ -239,6 +240,364 @@ local function CommDKPDeleteDKPEntry(index, timestamp, item)  -- index = entry i
 	StaticPopup_Show ("CONFIRM_DELETE")
 end
 
+
+local function CreateDKPEditWindow()
+	local f = CreateFrame("Frame", "CommDKP_DKPEditWindow", core.MonDKPUI);
+
+	f:SetPoint("TOPLEFT", core.CommDKPUI, "TOPLEFT", 300, -200);
+	f:SetSize(500, 250);
+	f:SetClampedToScreen(true)
+	f:SetBackdrop( {
+		bgFile = "Textures\\white.blp", tile = true,                -- White backdrop allows for black background with 1.0 alpha on low alpha containers
+		edgeFile = "Interface\\AddOns\\CommunityDKP\\Media\\Textures\\edgefile.tga", tile = true, tileSize = 1, edgeSize = 3,  
+		insets = { left = 0, right = 0, top = 0, bottom = 0 }
+	});
+	f:SetBackdropColor(0,0,0,1);
+	f:SetBackdropBorderColor(1,1,1,1)
+    f:SetFrameStrata("DIALOG")
+    f:SetFrameLevel(99)
+	f:SetMovable(true);
+	f:EnableMouse(true);
+	f:RegisterForDrag("LeftButton");
+	f:SetScript("OnDragStart", f.StartMoving);
+	f:SetScript("OnDragStop", f.StopMovingOrSizing);
+	tinsert(UISpecialFrames, f:GetName()); -- Sets frame to close on "Escape"
+	
+	
+	local clearFocus = function(self) self:HighlightText(0,0); self:ClearFocus() end
+
+	  -- Close Button
+	f.closeContainer = CreateFrame("Frame", "CommDKPEditWindowCloseButtonContainer", f)
+	f.closeContainer:SetPoint("CENTER", f, "TOPRIGHT", -4, 0)
+	f.closeContainer:SetBackdrop({
+		bgFile   = "Textures\\white.blp", tile = true,
+		edgeFile = "Interface\\AddOns\\CommunityDKP\\Media\\Textures\\edgefile.tga", tile = true, tileSize = 1, edgeSize = 2, 
+	});
+	f.closeContainer:SetBackdropColor(0,0,0,0.9)
+	f.closeContainer:SetBackdropBorderColor(1,1,1,0.2)
+	f.closeContainer:SetSize(14, 14)
+
+	f.closeBtn = CreateFrame("Button", nil, f, "UIPanelCloseButton")
+	f.closeBtn:SetPoint("CENTER", f.closeContainer, "TOPRIGHT", -14, -14)
+	
+	-- date
+	f.date = CreateFrame("EditBox", nil, f)
+	f.date:SetFontObject("CommDKPSmallLeft");
+	f.date:SetAutoFocus(false)
+	f.date:SetMultiLine(false)
+	f.date:SetTextInsets(10, 15, 5, 5)
+	f.date:SetBackdrop({
+    	bgFile   = "Textures\\white.blp", tile = true,
+		edgeFile = "Interface\\AddOns\\CommunityDKP\\Media\\Textures\\edgefile", tile = true, tileSize = 32, edgeSize = 2, 
+	});
+	f.date:SetBackdropColor(0,0,0,0.6)
+	f.date:SetBackdropBorderColor(1,1,1,0.6)
+	f.date:SetPoint("LEFT", f, "TOPLEFT", 75, -20);
+	f.date:SetSize(180, 28)
+	f.date:SetScript("OnEscapePressed", clearFocus)
+	f.date:SetScript("OnEnterPressed", clearFocus)
+	f.date:SetScript("OnTabPressed", clearFocus)
+	
+	f.dateHeader = f:CreateFontString(nil, "OVERLAY")
+	f.dateHeader:SetFontObject("CommDKPSmallRight");
+	f.dateHeader:SetScale(0.7)
+	f.dateHeader:SetPoint("RIGHT", f.date, "LEFT", -10, 0);
+	f.dateHeader:SetText("Date:")
+	
+	-- dkp
+	f.dkp = CreateFrame("EditBox", nil, f)
+	f.dkp:SetFontObject("CommDKPSmallLeft");
+	f.dkp:SetAutoFocus(false)
+	f.dkp:SetMultiLine(false)
+	f.dkp:SetTextInsets(10, 15, 5, 5)
+	f.dkp:SetBackdrop({
+    	bgFile   = "Textures\\white.blp", tile = true,
+		edgeFile = "Interface\\AddOns\\CommunityDKP\\Media\\Textures\\edgefile", tile = true, tileSize = 32, edgeSize = 2, 
+	});
+	f.dkp:SetBackdropColor(0,0,0,0.6)
+	f.dkp:SetBackdropBorderColor(1,1,1,0.6)
+	f.dkp:SetPoint("TOPLEFT", f.date, "BOTTOMLEFT", 0, -10);
+	f.dkp:SetSize(100, 28)
+	f.dkp:SetScript("OnEscapePressed", clearFocus)
+	f.dkp:SetScript("OnEnterPressed", clearFocus)
+	f.dkp:SetScript("OnTabPressed", clearFocus)
+	
+	f.dkpHeader = f:CreateFontString(nil, "OVERLAY")
+	f.dkpHeader:SetFontObject("CommDKPSmallRight");
+	f.dkpHeader:SetScale(0.7)
+	f.dkpHeader:SetPoint("RIGHT", f.dkp, "LEFT", -10, 0);
+	f.dkpHeader:SetText("dkp:")
+	
+	-- reason
+	f.reason = CreateFrame("EditBox", nil, f)
+	f.reason:SetFontObject("CommDKPSmallLeft");
+	f.reason:SetAutoFocus(false)
+	f.reason:SetMultiLine(false)
+	f.reason:SetTextInsets(10, 15, 5, 5)
+	f.reason:SetBackdrop({
+    	bgFile   = "Textures\\white.blp", tile = true,
+		edgeFile = "Interface\\AddOns\\CommunityDKP\\Media\\Textures\\edgefile", tile = true, tileSize = 32, edgeSize = 2, 
+	});
+	f.reason:SetBackdropColor(0,0,0,0.6)
+	f.reason:SetBackdropBorderColor(1,1,1,0.6)
+	f.reason:SetPoint("TOPLEFT", f.dkp, "BOTTOMLEFT", 0, -10);
+	f.reason:SetSize(200, 28)
+	f.reason:SetScript("OnEscapePressed", clearFocus)
+	f.reason:SetScript("OnEnterPressed", clearFocus)
+	f.reason:SetScript("OnTabPressed", clearFocus)
+	
+	f.reasonHeader = f:CreateFontString(nil, "OVERLAY")
+	f.reasonHeader:SetFontObject("CommDKPSmallRight");
+	f.reasonHeader:SetScale(0.7)
+	f.reasonHeader:SetPoint("RIGHT", f.reason, "LEFT", -10, 0);
+	f.reasonHeader:SetText("reason:")
+	
+	-- players
+	f.players = CreateFrame("EditBox", nil, f)
+	f.players:SetFontObject("CommDKPSmallLeft");
+	f.players:SetAutoFocus(false)
+	f.players:SetMultiLine(true)
+	f.players:SetTextInsets(10, 15, 5, 5)
+	f.players:SetBackdrop({
+    	bgFile   = "Textures\\white.blp", tile = true,
+		edgeFile = "Interface\\AddOns\\CommunityDKP\\Media\\Textures\\edgefile", tile = true, tileSize = 32, edgeSize = 2, 
+	});
+	f.players:SetBackdropColor(0,0,0,0.6)
+	f.players:SetBackdropBorderColor(1,1,1,0.6)
+	f.players:SetPoint("TOPLEFT", f.reason, "BOTTOMLEFT", 0, -10);
+	f.players:SetSize(400, 140)
+	f.players:SetScript("OnEscapePressed", clearFocus)
+	f.players:SetScript("OnEnterPressed", clearFocus)
+	f.players:SetScript("OnTabPressed", clearFocus)
+	
+	f.playersHeader = f:CreateFontString(nil, "OVERLAY")
+	f.playersHeader:SetFontObject("CommDKPSmallRight");
+	f.playersHeader:SetScale(0.7)
+	f.playersHeader:SetPoint("RIGHT", f.players, "LEFT", -10, 0);
+	f.playersHeader:SetText("players:")
+	
+	-- update button
+	f.update = CommDKP:CreateButton("BOTTOMRIGHT", f, "BOTTOMRIGHT", -20, 20, "Update");
+	f.update:SetSize(110,25)
+	
+	return f
+end
+
+local function CommDKPEditDKPEntry(index, timestamp, item)
+	local function ParseDateString(datestr)
+		local day, month, year, hour, min, sec = datestr:match("(%d+)/(%d+)/(%d+) (%d+):(%d+):(%d+)")
+		return ostime({day=day,month=month,year=year,hour=hour,min=min,sec=sec})
+	end
+	
+	local function GenerateChangesConfirmText(historyItem, newDate, newDkp, newReason, newPlayers)	
+		local function ListWithout(a, b)
+			local table_b = {}
+			local table_result = {}
+			
+			for _, v in pairs(b) do
+				table_b[v] = true
+			end
+			
+			for _, v in pairs(a) do
+				if table_b[v] == nil then
+					table_result[#table_result + 1] = v
+				end
+			end
+			
+			return table_result
+		end
+		local changes = "Do you really want to perform the following changes?\n"
+		
+		if newDate ~= historyItem.date then
+			changes = changes.."\n"
+			changes = changes.."Old Date: "..formdate("%d/%m/%Y %H:%M:%S", historyItem.date).."\n"
+			changes = changes.."New Date: "..formdate("%d/%m/%Y %H:%M:%S", newDate).."\n"
+		end
+		
+		if tostring(newDkp) ~= tostring(historyItem.dkp) then
+			changes = changes.."\n"
+			changes = changes.."Old DKP: "..historyItem["dkp"].."\n"
+			changes = changes.."New DKP: "..newDkp.."\n"
+		end
+		
+		if newReason ~= historyItem.reason then
+			changes = changes.."\n"
+			changes = changes.."Old Reason: "..historyItem["reason"].."\n"
+			changes = changes.."New Reason: "..newReason.."\n"
+		end
+		
+		
+		local playerArray = {strsplit(",", historyItem.players)}
+		local newPlayerArray = {strsplit(",", newPlayers)}
+		
+		local addedPlayers = ListWithout(newPlayerArray, playerArray)
+		local removedPlayers = ListWithout(playerArray, newPlayerArray)
+		
+		
+		if #addedPlayers > 0 then
+			changes = changes.."\n"
+			changes = changes.."The following players have been added: "
+			for i, player in pairs(addedPlayers) do
+				classSearch = CommDKP:Table_Search(CommDKP:GetTable(CommDKP_DKPTable, true), player)
+				c = CommDKP:GetCColors(CommDKP:GetTable(CommDKP_DKPTable, true)[classSearch[1][1]].class)
+				if i < #addedPlayers then
+					changes = changes.."|c"..c.hex..player.."|r, "
+				else
+					changes = changes.."|c"..c.hex..player.."|r\n"
+				end
+			end
+		end
+		
+		if #removedPlayers > 0 then
+			changes = changes.."\n"
+			changes = changes.."The following players have been removed: "
+			for i, player in pairs(removedPlayers) do
+				classSearch = CommDKP:Table_Search(CommDKP:GetTable(CommDKP_DKPTable, true), player)
+				c = CommDKP:GetCColors(CommDKP:GetTable(CommDKP_DKPTable, true)[classSearch[1][1]].class)
+				if i < #removedPlayers then
+					changes = changes.."|c"..c.hex..player.."|r, "
+				else
+					changes = changes.."|c"..c.hex..player.."|r\n"
+				end
+			end
+		end
+		
+		return changes
+	end
+
+	local item_table_index = CommDKP:Table_Search(CommDKP:GetTable(CommDKP_DKPHistory, true), index, "index")[1][1]
+	local historyItem = CommDKP:GetTable(CommDKP_DKPHistory, true)[item_table_index]
+	local f = CreateDKPEditWindow()
+	f.date:SetText(formdate("%d/%m/%Y %H:%M:%S", timestamp))
+	f.dkp:SetText(historyItem.dkp)
+	f.reason:SetText(historyItem.reason)
+	f.players:SetText(historyItem.players)
+	
+	
+	f.update:SetScript("OnClick", function()
+		local newDate = ParseDateString(f.date:GetText())
+		local newDkp = f.dkp:GetText()
+		local newReason = f.reason:GetText()
+		local newPlayers = f.players:GetText()
+		
+		if not strfind(newDkp, "%%") then
+			newDkp = tonumber(newDkp)
+		end
+		
+		StaticPopupDialogs["CONFIRM_DKPEDIT"] = {
+			text = GenerateChangesConfirmText(historyItem, newDate, newDkp, newReason, newPlayers),
+			button1 = L["YES"],
+			button2 = L["NO"],
+			OnAccept = function()
+				local oldPlayersArray = {strsplit(",", strsub(historyItem.players, 1, -2))} 	-- cuts off last "," from string to avoid creating an empty value
+				local oldDkp, oldMod;
+				local oldDkpString;
+				if strfind(historyItem.dkp, "%-%d*%.?%d+%%") then 		-- determines if it's a mass decay
+					oldDkp = {strsplit(",", historyItem.dkp)}
+					oldMod = "perc";
+				else
+					oldDkp = historyItem.dkp
+					oldMod = "whole"
+				end
+				
+				local newPlayersArray = {strsplit(",", strsub(newPlayers, 1, -2))} 	-- cuts off last "," from string to avoid creating an empty value
+				local newMod;
+				local newDkpString;
+				if strfind(newDkp, "%-%d*%.?%d+%%") then 		-- determines if it's a mass decay
+					newDkp = {strsplit(",", newDkp)}
+					newMod = "perc";
+				else
+					newMod = "whole"
+				end
+
+				local curOfficer = UnitName("player")
+				local curTime = time()
+				local newIndex = curOfficer.."-"..curTime
+				local deletesIndex = curOfficer.."-"..(curTime - 1)
+		
+				for i=1, #oldPlayersArray do
+					if mod == "perc" then
+						local search = CommDKP:Table_Search(CommDKP:GetTable(CommDKP_DKPTable, true), oldPlayersArray[i])
+
+						if search then
+							local inverted = tonumber(oldDkp[i]) * -1
+							CommDKP:GetTable(CommDKP_DKPTable, true)[search[1][1]].dkp = CommDKP:GetTable(CommDKP_DKPTable, true)[search[1][1]].dkp + inverted
+							oldDkpString = oldDkpString..inverted..",";
+
+							if i == #newPlayersArray then
+								oldDkpString = oldDkpString..oldDkp[#oldDkp]
+							end
+						end
+					else
+						local search = CommDKP:Table_Search(CommDKP:GetTable(CommDKP_DKPTable, true), oldPlayersArray[i])
+
+						if search then
+							local inverted = tonumber(oldDkp) * -1
+							CommDKP:GetTable(CommDKP_DKPTable, true)[search[1][1]].dkp = CommDKP:GetTable(CommDKP_DKPTable, true)[search[1][1]].dkp + inverted
+							
+							if (inverted < 0) then
+								CommDKP:GetTable(CommDKP_DKPTable, true)[search[1][1]].lifetime_gained = CommDKP:GetTable(CommDKP_DKPTable, true)[search[1][1]].lifetime_gained + inverted
+							end
+
+							oldDkpString = inverted;
+						end
+					end
+				end
+				
+				for i=1, #newPlayersArray do
+					if mod == "perc" then
+						local search = CommDKP:Table_Search(CommDKP:GetTable(CommDKP_DKPTable, true), newPlayersArray[i])
+
+						if search then
+							local inverted = tonumber(newDkp[i])
+							CommDKP:GetTable(CommDKP_DKPTable, true)[search[1][1]].dkp = CommDKP:GetTable(CommDKP_DKPTable, true)[search[1][1]].dkp + inverted
+							newDkpString = newDkpString..inverted..",";
+
+							if i == #newPlayersArray then
+								newDkpString = newDkpString..newDkp[#newDkp]
+							end
+						end
+					else
+						local search = CommDKP:Table_Search(CommDKP:GetTable(CommDKP_DKPTable, true), newPlayersArray[i])
+
+						if search then
+							local inverted = tonumber(newDkp)
+
+							CommDKP:GetTable(CommDKP_DKPTable, true)[search[1][1]].dkp = CommDKP:GetTable(CommDKP_DKPTable, true)[search[1][1]].dkp + inverted
+							
+							if (inverted > 0) then
+								CommDKP:GetTable(CommDKP_DKPTable, true)[search[1][1]].lifetime_gained = CommDKP:GetTable(CommDKP_DKPTable, true)[search[1][1]].lifetime_gained + inverted
+							end
+							
+							newDkpString = inverted;
+						end
+					end
+				end
+				
+				historyItem.deletedby = deletesIndex
+				table.insert(CommDKP:GetTable(CommDKP_DKPHistory, true), 1, { players=historyItem.players, dkp=oldDkpString, date=curTime, reason="Delete Entry", index=deletesIndex, deletes=index })
+				table.insert(CommDKP:GetTable(CommDKP_DKPHistory, true), 1, { players=newPlayers, dkp=newDkpString, date=newDate, reason=newReason, index=newIndex })
+				CommDKP.Sync:SendData("CommDKPDelSync", CommDKP:GetTable(CommDKP_DKPHistory, true)[1])
+
+				if CommDKP.ConfigTab6.history and CommDKP.ConfigTab6:IsShown() then
+					CommDKP:DKPHistory_Update(true)
+				end
+
+				CommDKP:StatusVerify_Update()
+				CommDKP:DKPTable_Update()
+				f:SetShown(false)
+			end,
+			timeout = 0,
+			whileDead = true,
+			hideOnEscape = true,
+			preferredIndex = 3,
+		}
+		StaticPopup_Show ("CONFIRM_DKPEDIT")
+	end)
+	
+	f:SetShown(true)
+end
+
 local function RightClickDKPMenu(self, index, timestamp, item)
 	local header
 	local search = CommDKP:Table_Search(CommDKP:GetTable(CommDKP_DKPHistory, true), index, "index")
@@ -248,6 +607,9 @@ local function RightClickDKPMenu(self, index, timestamp, item)
 		{ text = CommDKP.ConfigTab6.history[item].d:GetText():gsub(L["OTHER"].." -- ", ""), isTitle = true},
 		{ text = L["DELETEDKPENTRY"], func = function()
 			CommDKPDeleteDKPEntry(index, timestamp, item)
+		end },
+		{ text = L["EDITDKPENTRY"], func = function()
+			CommDKPEditDKPEntry(index, timestamp, item)
 		end },
 		}
 		EasyMenu(menu, menuFrame, "cursor", 0 , 0, "MENU", 2);
