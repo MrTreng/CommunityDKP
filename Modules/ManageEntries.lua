@@ -2,6 +2,8 @@ local _, core = ...;
 local _G = _G;
 local CommDKP = core.CommDKP;
 local L = core.L;
+local ostime = time;
+local formdate = date;
 
 
 local function Remove_Entries()
@@ -1282,4 +1284,251 @@ function CommDKP:ManageEntries()
 		CommDKP.ConfigTab3.TeamRename:Hide()
 		CommDKP.ConfigTab3.TeamAdd:Hide()
 	end
+
+	-- Standby button
+	CommDKP.ConfigTab3.Standby = {}
+	CommDKP.ConfigTab3.Standby.Button = self:CreateButton("TOPLEFT", CommDKP.ConfigTab3, "BOTTOMLEFT", 0, -50, "Standby");
+	CommDKP.ConfigTab3.Standby.Button:ClearAllPoints()
+	CommDKP.ConfigTab3.Standby.Button:SetPoint("TOPLEFT", CommDKP.ConfigTab3.WhitelistContainer.AddWhitelistButton, "BOTTOMLEFT", 0, -5);
+	CommDKP.ConfigTab3.Standby.Button:SetScript("OnEnter", 
+		function(self)
+			GameTooltip:SetOwner(self, "ANCHOR_RIGHT");
+			GameTooltip:SetText("Standby", 0.25, 0.75, 0.90, 1, true);
+			GameTooltip:AddLine("Opens dialogue to paste in bench messages.", 1.0, 1.0, 1.0, true);
+			GameTooltip:Show();
+		end
+	)
+	CommDKP.ConfigTab3.Standby.Button:SetScript("OnLeave", 
+		function(self)
+			GameTooltip:Hide()
+		end
+	)
+
+	local function CreateStandbyWindow()
+		local f = CreateFrame("Frame", "CommDKP_StandbyWindow", core.CommDKPUI);
+	
+		f:SetPoint("TOPLEFT", core.CommDKPUI, "TOPLEFT", 300, -200);
+		f:SetSize(500, 700);
+		f:SetClampedToScreen(true)
+		f:SetBackdrop( {
+			bgFile = "Textures\\white.blp", tile = true,                -- White backdrop allows for black background with 1.0 alpha on low alpha containers
+			edgeFile = "Interface\\AddOns\\CommunityDKP\\Media\\Textures\\edgefile.tga", tile = true, tileSize = 1, edgeSize = 3,  
+			insets = { left = 0, right = 0, top = 0, bottom = 0 }
+		});
+		f:SetBackdropColor(0,0,0,1);
+		f:SetBackdropBorderColor(1,1,1,1)
+		f:SetFrameStrata("DIALOG")
+		f:SetFrameLevel(99)
+		f:SetMovable(true);
+		f:EnableMouse(true);
+		f:RegisterForDrag("LeftButton");
+		f:SetScript("OnDragStart", f.StartMoving);
+		f:SetScript("OnDragStop", f.StopMovingOrSizing);
+		tinsert(UISpecialFrames, f:GetName()); -- Sets frame to close on "Escape"
+		
+		
+		local clearFocus = function(self) self:HighlightText(0,0); self:ClearFocus() end
+	
+		  -- Close Button
+		f.closeContainer = CreateFrame("Frame", "CommDKPEditWindowCloseButtonContainer", f)
+		f.closeContainer:SetPoint("CENTER", f, "TOPRIGHT", -4, 0)
+		f.closeContainer:SetBackdrop({
+			bgFile   = "Textures\\white.blp", tile = true,
+			edgeFile = "Interface\\AddOns\\CommunityDKP\\Media\\Textures\\edgefile.tga", tile = true, tileSize = 1, edgeSize = 2, 
+		});
+		f.closeContainer:SetBackdropColor(0,0,0,0.9)
+		f.closeContainer:SetBackdropBorderColor(1,1,1,0.2)
+		f.closeContainer:SetSize(14, 14)
+	
+		f.closeBtn = CreateFrame("Button", nil, f, "UIPanelCloseButton")
+		f.closeBtn:SetPoint("CENTER", f.closeContainer, "TOPRIGHT", -14, -14)
+		
+		-- standby text
+		f.standbyText = CreateFrame("EditBox", nil, f)
+		f.standbyText:SetFontObject("CommDKPTinyLeft");
+		f.standbyText:SetAutoFocus(false)
+		f.standbyText:SetMultiLine(true)
+		f.standbyText:SetTextInsets(10, 15, 5, 5)
+		f.standbyText:SetBackdrop({
+			bgFile   = "Textures\\white.blp", tile = true,
+			edgeFile = "Interface\\AddOns\\CommunityDKP\\Media\\Textures\\edgefile", tile = true, tileSize = 32, edgeSize = 2, 
+		});
+		f.standbyText:SetBackdropColor(0,0,0,0.6)
+		f.standbyText:SetBackdropBorderColor(1,1,1,0.6)
+		f.standbyText:ClearAllPoints()
+		f.standbyText:SetPoint("TOPLEFT", f, "TOPLEFT", 10, -10);
+		f.standbyText:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -10, 50);
+		-- f.standbyText:SetSize(400, 650)
+		f.standbyText:SetScript("OnEscapePressed", clearFocus)
+		-- f.standbyText:SetScript("OnEnterPressed", clearFocus)
+		f.standbyText:SetScript("OnTabPressed", clearFocus)
+
+		-- done button
+		f.done = CommDKP:CreateButton("BOTTOMRIGHT", f, "BOTTOMRIGHT", -20, 20, "Done");
+		f.done:SetSize(110,25)
+		
+		return f
+	end
+
+	
+	local function GenerateStandbyConfirmText(pendingNewEvents)
+		local changes = "Do you really want to create the following events?\n"
+		for i=1, #pendingNewEvents do
+			local playersArray = {strsplit(",", pendingNewEvents[i].players)}
+			changes = changes .. "\n"
+			changes = changes .. "Date: "..formdate("%d/%m/%Y %H:%M:%S", pendingNewEvents[i].date)..", "
+			changes = changes .. "DKP: "..pendingNewEvents[i].dkp..", "
+			changes = changes .. "Players: "
+			for i, player in pairs(playersArray) do
+				if player ~= "" then
+					local classSearch = CommDKP:Table_Search(CommDKP:GetTable(CommDKP_DKPTable, true), player)
+					local c = CommDKP:GetCColors(CommDKP:GetTable(CommDKP_DKPTable, true)[classSearch[1][1]].class)				
+					changes = changes.."|c"..c.hex..player.."|r, "
+				end
+			end
+			changes = changes .. "Reason: "..pendingNewEvents[i].reason.."\n"
+		end
+		return changes
+	end
+
+	-- confirmation dialog to add user(s)
+	CommDKP.ConfigTab3.Standby.Button:SetScript("OnClick", function()
+		local f = CreateStandbyWindow()
+		
+
+		f.done:SetScript("OnClick", function()
+			local function ParseTimeString(datestr)
+				local hour, min = datestr:match("(%d+):(%d+)")
+				local t = date("*t")
+				t.day = t.day
+				t.hour=hour
+				t.min=min
+				t.sec=0
+				return ostime(t)
+			end
+			local standbyText = f.standbyText:GetText()
+
+			local playerStandbyTable = {}
+			local intervals = {}
+			for player, action, time in standbyText:gmatch "Player:%s*(.-)%s.-Bench (%w+).-(%d%d:%d%d)" do
+				time = ParseTimeString(time) - 3600
+				-- print("DEBUG: "..player)
+				-- print("DEBUG: "..action)
+				-- print("DEBUG: "..time)
+				if action == "Start" then
+					if playerStandbyTable[player] == nil then
+						playerStandbyTable[player] = time
+					else
+						print("WARNING: Found two consecutive bench start times for player "..player)
+					end
+				elseif action == "End" then
+					if playerStandbyTable[player] == nil then
+						print("WARNING: Found bench end time without start time for player "..player)
+					else
+						tinsert(intervals, {start=tonumber(playerStandbyTable[player]), stop=tonumber(time), player=player})
+						playerStandbyTable[player] = nil
+					end
+				end
+			end
+			for player, start in pairs(playerStandbyTable) do
+				tinsert(intervals, {start=tonumber(start), stop=ParseTimeString("23:59"), player=player})
+				playerStandbyTable[player] = nil
+			end
+
+			for i=1, #intervals do
+				print("start: "..intervals[i].start)
+				print("stop: "..intervals[i].stop)
+				print("player: "..intervals[i].player)
+			end
+
+			-- Get earliest start time and latest stop time
+			local earliestStart = 9999999999
+			local latestStop = 0
+			for i=1, #intervals do
+				if intervals[i].start < earliestStart then
+					earliestStart = intervals[i].start
+				end
+				if intervals[i].stop > latestStop then
+					latestStop = intervals[i].stop
+				end
+			end
+
+			local pendingNewEvents = {}
+			local usedIndices = {}
+
+			local dkpTable = CommDKP:GetTable(CommDKP_DKPHistory, true)
+			for i=1, #dkpTable do
+				local entry = dkpTable[i]
+				if entry.date < earliestStart then
+					break
+				end
+				if entry.date < latestStop and entry.deletes == nil and entry.deletedby == nil then
+					player_table = { strsplit(",", entry.players) }
+					if player_table[1] ~= nil and #player_table > 1 then	-- removes last entry in table which ends up being nil, which creates an additional comma at the end of the string
+						tremove(player_table, #player_table)
+					end
+					if #player_table >= 10 then
+						local standbyCandidatesString = ""
+						for j=1, #intervals do
+							if intervals[j].start < entry.date and entry.date < intervals[j].stop and entry.players:find(intervals[j].player..",") == nil then
+								standbyCandidatesString = standbyCandidatesString..intervals[j].player..","
+								print("DEBUG: Adding "..intervals[j].player.." to event with reason "..entry.reason)
+							end
+						end
+						if standbyCandidatesString ~= "" then
+							-- get fresh index
+							local counter = time()
+							local indexCandidate = UnitName("player").."-"..counter
+							while CommDKP:Table_Search(CommDKP:GetTable(CommDKP_DKPHistory, true), indexCandidate, "index") or usedIndices[indexCandidate] do
+								counter = counter - 1
+								indexCandidate = UnitName("player").."-"..counter
+							end
+
+							usedIndices[indexCandidate] = true
+
+							tinsert(pendingNewEvents, {index=indexCandidate, players=standbyCandidatesString, dkp=entry.dkp, date=entry.date + 1, reason=entry.reason.." (Standby)"})
+						end
+					end
+				end
+			end
+
+			StaticPopupDialogs["CONFIRM_STANDBY"] = {
+				text = GenerateStandbyConfirmText(pendingNewEvents),
+				button1 = L["YES"],
+				button2 = L["NO"],
+				OnAccept = function()
+					for i, item in pairs(pendingNewEvents) do
+						local playersArray = { strsplit(",", item.players)}
+						for i, player in pairs(playersArray) do
+							if player ~= "" then
+								local search = CommDKP:Table_Search(CommDKP:GetTable(CommDKP_DKPTable, true), player)
+								local current = CommDKP:GetTable(CommDKP_DKPTable, true)[search[1][1]].dkp
+								CommDKP:GetTable(CommDKP_DKPTable, true)[search[1][1]].dkp = CommDKP_round(tonumber(current + item.dkp), core.DB.modes.rounding)
+								if item.dkp > 0 then
+									CommDKP:GetTable(CommDKP_DKPTable, true)[search[1][1]]["lifetime_gained"] = CommDKP_round(tonumber(CommDKP:GetTable(CommDKP_DKPTable, true)[search[1][1]]["lifetime_gained"] + item.dkp), core.DB.modes.rounding)
+								end
+							end
+						end
+						
+						table.insert(CommDKP:GetTable(CommDKP_DKPHistory, true), 1, item)
+						CommDKP.Sync:SendData("CommDKPDKPDist", CommDKP:GetTable(CommDKP_DKPHistory, true)[1])
+					end
+			
+					CommDKP:SortDKPHistoryTable()
+					if CommDKP.ConfigTab6.history and CommDKP.ConfigTab6:IsShown() then
+						CommDKP:DKPHistory_Update(true)
+					end
+					CommDKP:DKPTable_Update()
+					
+					f:SetShown(false)
+				end,
+				timeout = 0,
+				whileDead = true,
+				hideOnEscape = true,
+				preferredIndex = 3,
+			}
+			StaticPopup_Show ("CONFIRM_STANDBY")
+		end)
+		f:SetShown(true)
+	end);
 end
