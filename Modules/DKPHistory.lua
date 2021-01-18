@@ -242,7 +242,7 @@ end
 
 
 local function CreateDKPEditWindow()
-	local f = CreateFrame("Frame", "CommDKP_DKPEditWindow", core.MonDKPUI);
+	local f = CreateFrame("Frame", "CommDKP_DKPEditWindow", core.CommDKPUI);
 
 	f:SetPoint("TOPLEFT", core.CommDKPUI, "TOPLEFT", 300, -200);
 	f:SetSize(500, 250);
@@ -574,17 +574,20 @@ local function CommDKPEditDKPEntry(index, timestamp, item)
 					end
 				end
 				
+				-- delete old entry
 				historyItem.deletedby = deletesIndex
 				table.insert(CommDKP:GetTable(CommDKP_DKPHistory, true), 1, { players=historyItem.players, dkp=oldDkpString, date=curTime, reason="Delete Entry", index=deletesIndex, deletes=index })
-				table.insert(CommDKP:GetTable(CommDKP_DKPHistory, true), 1, { players=newPlayers, dkp=newDkpString, date=newDate, reason=newReason, index=newIndex })
 				CommDKP.Sync:SendData("CommDKPDelSync", CommDKP:GetTable(CommDKP_DKPHistory, true)[1])
 
+				-- create the new entry
+				table.insert(CommDKP:GetTable(CommDKP_DKPHistory, true), 1, { players=newPlayers, dkp=newDkpString, date=newDate, reason=newReason, index=newIndex })
+				CommDKP.Sync:SendData("CommDKPDKPDist", CommDKP:GetTable(CommDKP_DKPHistory, true)[1])
+	
 				if CommDKP.ConfigTab6.history and CommDKP.ConfigTab6:IsShown() then
 					CommDKP:DKPHistory_Update(true)
 				end
-
-				CommDKP:StatusVerify_Update()
 				CommDKP:DKPTable_Update()
+				
 				f:SetShown(false)
 			end,
 			timeout = 0,
