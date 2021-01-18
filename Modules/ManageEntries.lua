@@ -1412,9 +1412,6 @@ function CommDKP:ManageEntries()
 			local intervals = {}
 			for player, action, time in standbyText:gmatch "Player:%s*(.-)%s.-Bench (%w+).-(%d%d:%d%d)" do
 				time = ParseTimeString(time) - 3600
-				-- print("DEBUG: "..player)
-				-- print("DEBUG: "..action)
-				-- print("DEBUG: "..time)
 				if action == "Start" then
 					if playerStandbyTable[player] == nil then
 						playerStandbyTable[player] = time
@@ -1433,12 +1430,6 @@ function CommDKP:ManageEntries()
 			for player, start in pairs(playerStandbyTable) do
 				tinsert(intervals, {start=tonumber(start), stop=ParseTimeString("23:59"), player=player})
 				playerStandbyTable[player] = nil
-			end
-
-			for i=1, #intervals do
-				print("start: "..intervals[i].start)
-				print("stop: "..intervals[i].stop)
-				print("player: "..intervals[i].player)
 			end
 
 			-- Get earliest start time and latest stop time
@@ -1472,7 +1463,6 @@ function CommDKP:ManageEntries()
 						for j=1, #intervals do
 							if intervals[j].start < entry.date and entry.date < intervals[j].stop and entry.players:find(intervals[j].player..",") == nil then
 								standbyCandidatesString = standbyCandidatesString..intervals[j].player..","
-								print("DEBUG: Adding "..intervals[j].player.." to event with reason "..entry.reason)
 							end
 						end
 						if standbyCandidatesString ~= "" then
