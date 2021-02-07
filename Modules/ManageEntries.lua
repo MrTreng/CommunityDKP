@@ -1397,10 +1397,13 @@ function CommDKP:ManageEntries()
 		
 
 		f.done:SetScript("OnClick", function()
-			local function ParseTimeString(datestr)
+			local function ParseTimeString(datestr, raidDate)
 				local hour, min = datestr:match("(%d+):(%d+)")
+				local day, month, year = raidDate:match("(%d%d)-(%d%d)-(%d%d)")
 				local t = date("*t")
-				t.day = t.day
+				t.year = 2000 + year
+				t.month = month
+				t.day = day
 				t.hour=hour
 				t.min=min
 				t.sec=0
@@ -1410,8 +1413,9 @@ function CommDKP:ManageEntries()
 
 			local playerStandbyTable = {}
 			local intervals = {}
+			local raidDate = standbyText:match ":CMcalendar.-:.-(%d%d%-%d%d%-%d%d)"
 			for player, action, time in standbyText:gmatch "Player:%s*(.-)%s.-Bench (%w+).-(%d%d:%d%d)" do
-				time = ParseTimeString(time) - 3600
+				time = ParseTimeString(time, raidDate) - 3600
 				if action == "Start" then
 					if playerStandbyTable[player] == nil then
 						playerStandbyTable[player] = time
@@ -1428,7 +1432,7 @@ function CommDKP:ManageEntries()
 				end
 			end
 			for player, start in pairs(playerStandbyTable) do
-				tinsert(intervals, {start=tonumber(start), stop=ParseTimeString("23:59"), player=player})
+				tinsert(intervals, {start=tonumber(start), stop=ParseTimeString("23:59", raidDate), player=player})
 				playerStandbyTable[player] = nil
 			end
 
