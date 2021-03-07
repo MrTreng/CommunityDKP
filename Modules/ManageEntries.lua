@@ -1398,11 +1398,25 @@ function CommDKP:ManageEntries()
 
 		f.done:SetScript("OnClick", function()
 			local function ParseTimeString(datestr, raidDate)
+				local months = {
+					Jan= 1,
+					Feb= 2,
+					Mar= 3,
+					Apr= 4,
+					May= 5,
+					Jun= 6,
+					Jul= 7,
+					Aug= 8,
+					Sep= 9,
+					Oct= 10,
+					Nov= 11,
+					Dec= 12
+				}
 				local hour, min = datestr:match("(%d+):(%d+)")
-				local day, month, year = raidDate:match("(%d%d)-(%d%d)-(%d%d)")
+				local day, monthLetters = raidDate:match("(%d+). (%w+)")
 				local t = date("*t")
-				t.year = 2000 + year
-				t.month = month
+				-- t.year = 2000 + year
+				t.month = months[monthLetters]
 				t.day = day
 				t.hour=hour
 				t.min=min
@@ -1413,7 +1427,7 @@ function CommDKP:ManageEntries()
 
 			local playerStandbyTable = {}
 			local intervals = {}
-			local raidDate = standbyText:match ":CMcalendar.-:.-(%d%d%-%d%d%-%d%d)"
+			local raidDate = standbyText:match ":CMcalendar.-:.-(%d+. %w+)"
 			for player, action, time in standbyText:gmatch "Player:%s*(.-)%s.-Bench (%w+).-(%d%d:%d%d)" do
 				time = ParseTimeString(time, raidDate) - 3600
 				if action == "Start" then
@@ -1485,43 +1499,54 @@ function CommDKP:ManageEntries()
 					end
 				end
 			end
-
-			StaticPopupDialogs["CONFIRM_STANDBY"] = {
-				text = GenerateStandbyConfirmText(pendingNewEvents),
-				button1 = L["YES"],
-				button2 = L["NO"],
-				OnAccept = function()
-					for i, item in pairs(pendingNewEvents) do
-						local playersArray = { strsplit(",", item.players)}
-						for i, player in pairs(playersArray) do
-							if player ~= "" then
-								local search = CommDKP:Table_Search(CommDKP:GetTable(CommDKP_DKPTable, true), player)
-								local current = CommDKP:GetTable(CommDKP_DKPTable, true)[search[1][1]].dkp
-								CommDKP:GetTable(CommDKP_DKPTable, true)[search[1][1]].dkp = CommDKP_round(tonumber(current + item.dkp), core.DB.modes.rounding)
-								if item.dkp > 0 then
-									CommDKP:GetTable(CommDKP_DKPTable, true)[search[1][1]]["lifetime_gained"] = CommDKP_round(tonumber(CommDKP:GetTable(CommDKP_DKPTable, true)[search[1][1]]["lifetime_gained"] + item.dkp), core.DB.modes.rounding)
+			if (#pendingNewEvents > 0) then
+				StaticPopupDialogs["CONFIRM_STANDBY"] = {
+					text = GenerateStandbyConfirmText(pendingNewEvents),
+					button1 = L["YES"],
+					button2 = L["NO"],
+					OnAccept = function()
+						for i, item in pairs(pendingNewEvents) do
+							local playersArray = { strsplit(",", item.players)}
+							for i, player in pairs(playersArray) do
+								if player ~= "" then
+									local search = CommDKP:Table_Search(CommDKP:GetTable(CommDKP_DKPTable, true), player)
+									local current = CommDKP:GetTable(CommDKP_DKPTable, true)[search[1][1]].dkp
+									CommDKP:GetTable(CommDKP_DKPTable, true)[search[1][1]].dkp = CommDKP_round(tonumber(current + item.dkp), core.DB.modes.rounding)
+									if item.dkp > 0 then
+										CommDKP:GetTable(CommDKP_DKPTable, true)[search[1][1]]["lifetime_gained"] = CommDKP_round(tonumber(CommDKP:GetTable(CommDKP_DKPTable, true)[search[1][1]]["lifetime_gained"] + item.dkp), core.DB.modes.rounding)
+									end
 								end
 							end
+							
+							table.insert(CommDKP:GetTable(CommDKP_DKPHistory, true), 1, item)
+							CommDKP.Sync:SendData("CommDKPDKPDist", CommDKP:GetTable(CommDKP_DKPHistory, true)[1])
 						end
+				
+						CommDKP:SortDKPHistoryTable()
+						if CommDKP.ConfigTab6.history and CommDKP.ConfigTab6:IsShown() then
+							CommDKP:DKPHistory_Update(true)
+						end
+						CommDKP:DKPTable_Update()
 						
-						table.insert(CommDKP:GetTable(CommDKP_DKPHistory, true), 1, item)
-						CommDKP.Sync:SendData("CommDKPDKPDist", CommDKP:GetTable(CommDKP_DKPHistory, true)[1])
-					end
-			
-					CommDKP:SortDKPHistoryTable()
-					if CommDKP.ConfigTab6.history and CommDKP.ConfigTab6:IsShown() then
-						CommDKP:DKPHistory_Update(true)
-					end
-					CommDKP:DKPTable_Update()
-					
-					f:SetShown(false)
-				end,
-				timeout = 0,
-				whileDead = true,
-				hideOnEscape = true,
-				preferredIndex = 3,
-			}
-			StaticPopup_Show ("CONFIRM_STANDBY")
+						f:SetShown(false)
+					end,
+					timeout = 0,
+					whileDead = true,
+					hideOnEscape = true,
+					preferredIndex = 3,
+				}
+				StaticPopup_Show ("CONFIRM_STANDBY")
+			else
+				StaticPopupDialogs["CONFIRM_NOSTANDBY"] = {
+					text = "No events to be created",
+					button1 = L["Yes"],
+					timeout = 0,
+					whileDead = true,
+					hideOnEscape = true,
+					preferredIndex = 3,
+				}
+				StaticPopup_Show ("CONFIRM_NOSTANDBY")
+			end
 		end)
 		f:SetShown(true)
 	end);
